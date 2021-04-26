@@ -1,21 +1,26 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Apr 25 14:44:30 2021
+
+@author: bernard
+"""
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import filters
 
-K1 = [5299.313, 0, 1263.818, 0, 5299.313, 977.763, 0, 0, 1]
-K2 = [5299.313, 0, 1438.004, 0, 5299.313, 977.763, 0, 0, 1]
+K1 = [5806.559, 0, 1429.219, 0, 5806.559, 993.403, 0, 0, 1 ]
+K2 = [5806.559, 0, 1543.51, 0, 5806.559, 993.403, 0, 0, 1 ]
 K1 = np.reshape(K1, (3, 3))
 K2 = np.reshape(K2, (3, 3))
-B = 177.288  # (mm)
-f = 5299.13  # (mm)
-doffs = 174.186  # (mm)
-BLOCK_SIZE = 33
-SEARCH_BLOCK_SIZE = 10  # 56
-vmin = 54
-vmax = 147
-
-
+B = 174.019
+f = 5806.559
+BLOCK_SIZE = 31
+SEARCH_BLOCK_SIZE = 10 # 56
+vmin = 38
+vmax = 222
 def fundamental_matrix(feature_1, feature_2):
     # Compute the centroid of all corresponding points in a single image
     feature_1_mean_x = np.mean(feature_1[:, 0])
@@ -330,42 +335,41 @@ def rectification(img1, img2):
 
     return img5, img3
 
-
 def main():
-    img1 = cv2.imread('./Dataset 1/im0.png')
-    img2 = cv2.imread('./Dataset 1/im1.png')
-
-    # # Scale the image
+    img1 = cv2.imread('./Dataset 3/im0.png')
+    img2 = cv2.imread('./Dataset 3/im1.png')
+    
     # scale_percent = 10 # percent of original size
     # width = int(img1.shape[1] * scale_percent / 100)
     # height = int(img1.shape[0] * scale_percent / 100)
     # dim = (width, height)
     # img1 = cv2.resize(img1, dim, interpolation = cv2.INTER_AREA)
     # img2 = cv2.resize(img2, dim, interpolation = cv2.INTER_AREA)
-
+    
     h1, w1, ch1 = img1.shape
     h2, w2, ch2 = img2.shape
 
     kp1, kp2, good = detect_feature(img1, img2)
-
+    
     feature_1 = []
     feature_2 = []
 
     for i, match in enumerate(good):
         feature_1.append(kp1[match.queryIdx].pt)
         feature_2.append(kp2[match.trainIdx].pt)
-
+    
     # Only for testing the result
     pts1 = np.int32(feature_1)
     pts2 = np.int32(feature_2)
-    F, mask = cv2.findFundamentalMat(pts1, pts2, cv2.FM_RANSAC)
-
+    F, mask = cv2.findFundamentalMat(pts1,pts2,cv2.FM_RANSAC)
+    
+    
     Best_F_matrix, new_feature_1, new_feature_2 = estimate_fundamental_matrix(feature_1, feature_2)
     # print(Best_F_matrix)
-
+    
     new_feature_1 = np.int32(new_feature_1)
     new_feature_2 = np.int32(new_feature_2)
-
+    
     E_matrix = essential_matrix(Best_F_matrix, K1)
     R, T = extract_camera_pose(E_matrix, K1)
     # print(R)
@@ -377,78 +381,74 @@ def main():
         h = np.vstack((h, I))
         H.append(h)
     # print('H:\n', H)
-    _, H1, H2 = cv2.stereoRectifyUncalibrated(np.float32(new_feature_1), np.float32(new_feature_2), Best_F_matrix,
-                                              imgSize=(w1, h1))
+    _, H1, H2 = cv2.stereoRectifyUncalibrated(np.float32(new_feature_1), np.float32(new_feature_2), Best_F_matrix, imgSize=(w1, h1))
     # print("H1:\n", H1)
     # print("H2:\n",H2)
-
+    
     # Store the output data in the text file
-    file = open('./dataset1_output_data.txt', 'w')
-    file.write('*' * 50 + '\n' + '(Acquired by the inbuilt function) Foundatmental matrix' + '\n')
+    file = open('./dataset3_output_data.txt', 'w')
+    file.write('*'*50 + '\n' + '(Acquired by the inbuilt function) Foundatmental matrix' + '\n')
     file.write(str(F) + '\n')
-    file.write('*' * 50 + '\n' + 'Estimated foundatmental matrix' + '\n')
+    file.write('*'*50 + '\n' + 'Estimated foundatmental matrix' + '\n')
     file.write(str(Best_F_matrix) + '\n')
-    file.write('*' * 50 + '\n' + 'Essential matrix' + '\n')
+    file.write('*'*50 + '\n' + 'Essential matrix' + '\n')
     file.write(str(E_matrix) + '\n')
-    file.write('*' * 50 + '\n' + 'Rotation vector' + '\n')
+    file.write('*'*50 + '\n' + 'Rotation vector' + '\n')
     file.write(str(R) + '\n')
-    file.write('*' * 50 + '\n' + 'Translation vector' + '\n')
+    file.write('*'*50 + '\n' + 'Translation vector' + '\n')
     file.write(str(T) + '\n')
-    file.write('*' * 50 + '\n' + 'Homography matrix (H1)' + '\n')
+    file.write('*'*50 + '\n' + 'Homography matrix (H1)' + '\n')
     file.write(str(H) + '\n')
-    file.write('*' * 50 + '\n' + 'Homography matrix img1' + '\n')
+    file.write('*'*50 + '\n' + 'Homography matrix img1' + '\n')
     file.write(str(H1) + '\n')
-    file.write('*' * 50 + '\n' + 'Homography matrix img2' + '\n')
+    file.write('*'*50 + '\n' + 'Homography matrix img2' + '\n')
     file.write(str(H2) + '\n')
-    file.write('*' * 50 + '\n')
+    file.write('*'*50 + '\n')
     file.close()
-
+    
     img1_rectified = cv2.warpPerspective(img1, H1, (w1, h1))
     img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2))
     # display_image(img1, img2)
-
-
+    
+    
     img1_res, img2_res = rectification(img1_rectified, img2_rectified)
-
-    res = np.concatenate((img1_res, img2_res), axis=1)
+    
+    res = np.concatenate((img1_res, img2_res), axis = 1)
     cv2.imshow("Rectification", res)
 
     img1_rectified = cv2.warpPerspective(img1, H1, (w1, h1))
-    img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2))
-
+    img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2)) 
+    
     disparity_map = get_disparity_map(img1_rectified, img2_rectified)
-
+    
     disparity_map_gray = None
-    disparity_map_gray = cv2.normalize(disparity_map, disparity_map_gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX,
-                                       dtype=cv2.CV_8U)
+    disparity_map_gray = cv2.normalize(disparity_map, disparity_map_gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     cv2.imshow('disparity_gray', disparity_map_gray)
-
+    
     depth_map = get_depth_map(disparity_map_gray)
-
+    
     disparity_map_heat = None
-    disparity_map_heat = cv2.normalize(disparity_map, disparity_map_heat, alpha=vmin, beta=vmax,
-                                       norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    disparity_map_heat = cv2.normalize(disparity_map, disparity_map_heat, alpha=vmin, beta=vmax, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
     disparity_map_heat = cv2.applyColorMap(disparity_map_heat, cv2.COLORMAP_JET)
     cv2.imshow("disparity_heat", disparity_map_heat)
-
+    
     depth_map_gray = None
-    depth_map_gray = cv2.normalize(depth_map, depth_map_gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX,
-                                   dtype=cv2.CV_8U)
-    cv2.imshow('depth_gray', depth_map)
-
+    depth_map_gray = cv2.normalize(depth_map, depth_map_gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    cv2.imshow('depth_gray', depth_map_gray)
+    
+    
     depth_map_heat = cv2.applyColorMap(depth_map_gray, cv2.COLORMAP_JET)
     cv2.imshow("depth_heat", depth_map_heat)
-
-    cv2.imwrite('./output/data_1_Rectification.jpg', res)
-    cv2.imwrite('./output/data_1_disparity_gray.jpg', disparity_map_gray)
-    cv2.imwrite('./output/data_1_disparity_heat.jpg', disparity_map_heat)
-    cv2.imwrite('./output/data_1_depth_gray.jpg', depth_map)
-    cv2.imwrite('./output/data_1_depth_heat.jpg', depth_map_heat)
-
+    
+    cv2.imwrite('./output/data_3_Rectification.jpg', res)
+    cv2.imwrite('./output/data_3_disparity_gray.jpg', disparity_map_gray)
+    cv2.imwrite('./output/data_3_disparity_heat.jpg', disparity_map_heat)
+    cv2.imwrite('./output/data_3_depth_gray.jpg', depth_map)
+    cv2.imwrite('./output/data_3_depth_heat.jpg', depth_map_heat)
+    
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
     main()
-
