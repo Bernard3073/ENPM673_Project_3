@@ -386,7 +386,7 @@ def main():
     # print("H2:\n",H2)
     
     # Store the output data in the text file
-    file = open('./dataset3_output_data.txt', 'w')
+    file = open('./output/dataset3_output_data.txt', 'w')
     file.write('*'*50 + '\n' + '(Acquired by the inbuilt function) Foundatmental matrix' + '\n')
     file.write(str(F) + '\n')
     file.write('*'*50 + '\n' + 'Estimated foundatmental matrix' + '\n')

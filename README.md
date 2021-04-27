@@ -1,5 +1,7 @@
 Remember to have the three dataset in your current directory  
-Install opencv-contrib-python for SIFT feature detection
+Also, ensure that you have the output file directory    
+The output of each image and data will be stored in the output directory  
+Make sure to install opencv-contrib-python for SIFT feature detection
 
 For dataset 1:
 
@@ -13,4 +15,3 @@ For dataset 3:
 
 `python3 data_3.py`
 
-The output of each image will be stored in the output directory
